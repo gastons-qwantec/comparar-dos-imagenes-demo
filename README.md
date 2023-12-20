@@ -14,6 +14,10 @@ Este proyecto utiliza la biblioteca `face_recognition` en Python para comparar d
 2. Instalar Visual Studio con herramientas de desarrollo en C++.
 3. Instalar `face_recognition`:
    `$ pip install face-recognition`
+4. Instalar Tesseract url: `https://github.com/UB-Mannheim/tesseract/wiki`
+5. instalar `pytesseract`: `$ pip install pytesseract`
+
+   NOTA: tutorial de instalación en windows :https://www.datasmarts.net/como-instalar-tesseract-ocr/
 
 ## Generación del `requirements.txt`
 
