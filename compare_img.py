@@ -6,7 +6,8 @@ image1_encoding = face_recognition.face_encodings(image1)[0]
 
 # Cargar la segunda imagen de una persona tomada de la camara de perfil.
 
-image2 = face_recognition.load_image_file("images/real.png")
+# image2 = face_recognition.load_image_file("images/real.png")
+image2 = face_recognition.load_image_file("images/reyna.jpg")
 # image2 = face_recognition.load_image_file("images/rey.jpg")
 image2_encoding = face_recognition.face_encodings(image2)[0]
 
