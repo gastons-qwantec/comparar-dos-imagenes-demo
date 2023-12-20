@@ -1,7 +1,7 @@
 import face_recognition
 
 # carga de la primera imagen en este caso la dni a comprar.
-image1 = face_recognition.load_image_file("images/dni.png")
+image1 = face_recognition.load_image_file("images/dni_mx.png")
 image1_encoding = face_recognition.face_encodings(image1)[0]
 
 # Cargar la segunda imagen de una persona tomada de la camara de perfil.
