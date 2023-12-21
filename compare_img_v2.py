@@ -3,74 +3,100 @@ import numpy as np
 import pytesseract
 from PIL import Image
 
-# OCR para extraer texto del DNI
-# se require un tamaño de imagen estandar del DNI para que las cordenadas de la imagen coincidan siempre
-standard_size = (1345, 851)
-dni_image_original = Image.open("images/dni2.jpg")
-# dni_image_original = Image.open("images/dni.png") #no funciona porque es muy chica y al hacerla mas grande se pierde full calidad de elegibidad de la imagen (313x198)
-dni_image = dni_image_original.resize(standard_size, Image.Resampling.LANCZOS)
 
-# Coordenadas para el RUN
-x1_run, y1_run, x2_run, y2_run = 148, 730, 438, 778
-roi_run = dni_image.crop((x1_run, y1_run, x2_run, y2_run))
+def process_dni_images(dni_image, user_image):
+    # OCR para extraer texto del DNI
+    # se require un tamaño de imagen estandar del DNI para que las cordenadas de la imagen coincidan siempre
+    # standard_size = (1345, 851)
+    # dni_image_original = Image.open("images/dni2.jpg")
+    # dni_image_original = Image.open("images/dni.png") #no funciona porque es muy chica y al hacerla mas grande se pierde full calidad de elegibidad de la imagen (313x198)
+    # dni_image = dni_image_original.resize(standard_size, Image.Resampling.LANCZOS)
 
-# Coordenadas para los Apellidos
-x1_apellidos, y1_apellidos, x2_apellidos, y2_apellidos = 459, 141, 926, 233
-roi_apellidos = dni_image.crop((x1_apellidos, y1_apellidos, x2_apellidos, y2_apellidos))
+    # Convertir imágenes PIL a arrays de NumPy
+    user_image_np = np.array(user_image)
 
-# Coordenadas para los Nombres
-x1_nombres, y1_nombres, x2_nombres, y2_nombres = 466, 264, 964, 308
-roi_nombres = dni_image.crop((x1_nombres, y1_nombres, x2_nombres, y2_nombres))
+    # Coordenadas para el RUN
+    x1_run, y1_run, x2_run, y2_run = 148, 730, 438, 778
+    roi_run = dni_image.crop((x1_run, y1_run, x2_run, y2_run))
 
-# Coordenadas para el Número de Documento
-x1_numero_documento, y1_numero_documento, x2_numero_documento, y2_numero_documento = (
-    775,
-    422,
-    1093,
-    472,
-)
-roi_numero_documento = dni_image.crop(
-    (x1_numero_documento, y1_numero_documento, x2_numero_documento, y2_numero_documento)
-)
+    # Coordenadas para los Apellidos
+    x1_apellidos, y1_apellidos, x2_apellidos, y2_apellidos = 459, 141, 926, 233
+    roi_apellidos = dni_image.crop(
+        (x1_apellidos, y1_apellidos, x2_apellidos, y2_apellidos)
+    )
 
-# Extraer texto de cada ROI usando pytesseract
-text_run = pytesseract.image_to_string(roi_run, lang="spa")
-text_apellidos = pytesseract.image_to_string(roi_apellidos, lang="spa")
-text_nombres = pytesseract.image_to_string(roi_nombres, lang="spa")
-text_numero_documento = pytesseract.image_to_string(roi_numero_documento, lang="spa")
+    # Coordenadas para los Nombres
+    x1_nombres, y1_nombres, x2_nombres, y2_nombres = 466, 264, 964, 308
+    roi_nombres = dni_image.crop((x1_nombres, y1_nombres, x2_nombres, y2_nombres))
 
-# Imprimir los resultados
-print("RUN:", text_run.strip())
-print("Apellidos:", text_apellidos.strip())
-print("Nombres:", text_nombres.strip())
-print("Número de Documento:", text_numero_documento.strip())
+    # Coordenadas para el Número de Documento
+    (
+        x1_numero_documento,
+        y1_numero_documento,
+        x2_numero_documento,
+        y2_numero_documento,
+    ) = (
+        775,
+        422,
+        1093,
+        472,
+    )
+    roi_numero_documento = dni_image.crop(
+        (
+            x1_numero_documento,
+            y1_numero_documento,
+            x2_numero_documento,
+            y2_numero_documento,
+        )
+    )
 
-# image1 = face_recognition.load_image_file("images/dni2.jpg")
-# image1_encoding = face_recognition.face_encodings(image1)[0]
+    # Extraer texto de cada ROI usando pytesseract
+    text_run = pytesseract.image_to_string(roi_run, lang="spa")
+    text_apellidos = pytesseract.image_to_string(roi_apellidos, lang="spa")
+    text_nombres = pytesseract.image_to_string(roi_nombres, lang="spa")
+    text_numero_documento = pytesseract.image_to_string(
+        roi_numero_documento, lang="spa"
+    )
 
-# Coordenadas para la foto en el DNI
-x1_foto, y1_foto, x2_foto, y2_foto = 19, 249, 468, 670
-roi_foto_dni = dni_image.crop((x1_foto, y1_foto, x2_foto, y2_foto))
+    # Imprimir los resultados
+    print("RUN:", text_run.strip())
+    print("Apellidos:", text_apellidos.strip())
+    print("Nombres:", text_nombres.strip())
+    print("Número de Documento:", text_numero_documento.strip())
 
-# Convertir la ROI a un formato compatible con face_recognition (array de NumPy)
-roi_foto_dni_np = np.array(roi_foto_dni)
+    # Coordenadas para la foto en el DNI
+    x1_foto, y1_foto, x2_foto, y2_foto = 19, 249, 468, 670
+    roi_foto_dni_np = np.array(dni_image.crop((x1_foto, y1_foto, x2_foto, y2_foto)))
+    foto_dni_encoding = face_recognition.face_encodings(roi_foto_dni_np)[0]
+    image2_encoding = face_recognition.face_encodings(user_image_np)[0]
 
-# Obtener la codificación de la cara en la foto del DNI
-# Asegúrate de que la imagen solo contenga una cara para evitar errores
-foto_dni_encoding = face_recognition.face_encodings(roi_foto_dni_np)[0]
+    # Obtener la distancia entre las dos codificaciones
+    # Mientras menor la distancia mayor la similitud, sirve para medir un nivel de confianza en la coincidencia
+    face_distance = face_recognition.face_distance(
+        [foto_dni_encoding], image2_encoding
+    )[0]
+    print("Distancia entre las caras:", face_distance)
 
-# Cargar la segunda imagen de una persona tomada de la camara de perfil.
+    # Comparar las dos imágenes
+    comparison_result = face_recognition.compare_faces(
+        [foto_dni_encoding], image2_encoding
+    )
+    are_same_person = bool(comparison_result[0])
 
-image2 = face_recognition.load_image_file("images/real.png")
-# image2 = face_recognition.load_image_file("images/reyna.jpg")
-# image2 = face_recognition.load_image_file("images/rey.jpg")
-image2_encoding = face_recognition.face_encodings(image2)[0]
+    print("¿Son la misma persona?:", are_same_person)
 
-# Obtener la distancia entre las dos codificaciones
-# Mientras menor la distancia mayor la similitud, sirve para medir un nivel de confianza en la coincidencia
-face_distance = face_recognition.face_distance([foto_dni_encoding], image2_encoding)[0]
-print("Distancia entre las caras:", face_distance)
+    if not are_same_person:
+        # Las imágenes no son de la misma persona
+        return {
+            "Distancia entre las caras": face_distance,
+            "¿Son la misma persona?": are_same_person,
+        }
 
-# Comparar las dos imágenes
-results = face_recognition.compare_faces([foto_dni_encoding], image2_encoding)
-print("¿Son la misma persona?:", results[0])
+    return {
+        "RUN": text_run.strip(),
+        "Apellidos": text_apellidos.strip(),
+        "Nombres": text_nombres.strip(),
+        "Número de Documento": text_numero_documento.strip(),
+        "Distancia entre las caras": face_distance,
+        "¿Son la misma persona?": are_same_person,
+    }
