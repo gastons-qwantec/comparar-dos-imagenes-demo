@@ -13,6 +13,11 @@ def process_dni_images(dni_image, user_image):
     # dni_image = dni_image_original.resize(standard_size, Image.Resampling.LANCZOS)
 
     # Convertir imágenes PIL a arrays de NumPy
+    # Convertir a RGB si la imagen está en un formato no compatible
+    if dni_image.mode in ("RGBA", "P"):
+        dni_image = dni_image.convert("RGB")
+    if user_image.mode in ("RGBA", "P"):
+        user_image = user_image.convert("RGB")
     user_image_np = np.array(user_image)
 
     # Coordenadas para el RUN

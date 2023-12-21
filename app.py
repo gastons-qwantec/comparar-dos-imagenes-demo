@@ -2,12 +2,14 @@ import base64
 import io
 
 from flask import Flask, jsonify, request
+from flask_cors import CORS
 from PIL import Image
 
 from compare_img_v2 import process_dni_images
 from db_connection import collection
 
 app = Flask(__name__)
+CORS(app, resources={r"/process-dni": {"origins": "http://localhost:3000"}})
 
 
 @app.route("/process-dni", methods=["POST"])
