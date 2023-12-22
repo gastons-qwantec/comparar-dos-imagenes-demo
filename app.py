@@ -4,6 +4,7 @@ import io
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from PIL import Image
+from pymongo.errors import PyMongoError
 
 from compare_img_v2 import process_dni_images
 from db_connection import collection
@@ -14,39 +15,45 @@ CORS(app, resources={r"/process-dni": {"origins": "http://localhost:3000"}})
 
 @app.route("/process-dni", methods=["POST"])
 def process_dni():
-    # try:
-    data = request.get_json()
+    try:
+        data = request.get_json()
 
-    dni_image_data = base64.b64decode(data["dni_image"].split(",")[1])
-    user_image_data = base64.b64decode(data["user_image"].split(",")[1])
-    dni_image = Image.open(io.BytesIO(dni_image_data))
-    user_image = Image.open(io.BytesIO(user_image_data))
+        # Validaciones de datos recibidos
+        if "dni_image" not in data or "user_image" not in data:
+            return jsonify({"message": "Datos incompletos"}), 400
 
-    results = process_dni_images(dni_image, user_image)
-    if not results["¿Son la misma persona?"]:
+        dni_image_data = base64.b64decode(data["dni_image"].split(",")[1])
+        user_image_data = base64.b64decode(data["user_image"].split(",")[1])
+        dni_image = Image.open(io.BytesIO(dni_image_data))
+        user_image = Image.open(io.BytesIO(user_image_data))
+
+        results = process_dni_images(dni_image, user_image)
+
+        if not results["misma_persona"]:
+            return (
+                jsonify({"message": "Imágenes No son iguales", "results": results}),
+                200,
+            )
+
+        rut = results.get("RUN")
+        if rut and collection.find_one({"RUN": rut}):
+            app.logger.info(f"RUT {rut} ya existe en la base de datos")
+            return jsonify({"message": f"RUT {rut} ya existe en la base de datos"}), 201
+
+        insert_result = collection.insert_one(results)
+        results["_id"] = str(insert_result.inserted_id)
+
         return (
-            jsonify(
-                {
-                    "message": "Imágenes No son iguales",
-                    "results": results,
-                }
-            ),
+            jsonify({"message": "Imágenes procesadas con éxito", "results": results}),
             200,
         )
 
-    # Insertar los resultados en MongoDB y obtener el ID insertado
-    insert_result = collection.insert_one(results)
-    results["_id"] = str(insert_result.inserted_id)
-    # Preparar la respuesta, incluyendo el ID del documento como una cadena
-    response = {
-        "message": "Imágenes procesadas con éxito",
-        "results": results,
-    }
-    return jsonify(response)
-
-
-# except Exception as e:
-#     return jsonify({"error": str(e)}), 500
+    except PyMongoError as e:
+        app.logger.error(f"Error de base de datos: {e}")
+        return jsonify({"error": "Error al interactuar con la base de datos"}), 500
+    except Exception as e:
+        app.logger.error(f"Error del servidor: {e}")
+        return jsonify({"error": "Error interno del servidor"}), 500
 
 
 if __name__ == "__main__":
