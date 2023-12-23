@@ -1,16 +1,96 @@
 import face_recognition
+import numpy as np
+import pytesseract
+from PIL import Image, ImageEnhance, ImageFilter
 
-# carga de la primera imagen en este caso la dni a comprar.
-image1 = face_recognition.load_image_file("images/dni.png")
-image1_encoding = face_recognition.face_encodings(image1)[0]
 
-# Cargar la segunda imagen de una persona tomada de la camara de perfil.
+def preprocess_image_for_ocr(image):
+    # Aplicar filtros para mejorar la calidad de la imagen para OCR
+    image = image.convert("L")  # Convertir a escala de grises
+    image = image.filter(ImageFilter.MedianFilter())  # Filtro para reducir ruido
+    enhancer = ImageEnhance.Contrast(image)
+    image = enhancer.enhance(2)  # Mejorar el contraste
+    image = image.filter(ImageFilter.SHARPEN)  # Afinar la imagen
+    return image
 
-# image2 = face_recognition.load_image_file("images/real.png")
-image2 = face_recognition.load_image_file("images/reyna.jpg")
-# image2 = face_recognition.load_image_file("images/rey.jpg")
-image2_encoding = face_recognition.face_encodings(image2)[0]
 
-# Comparar las dos imágenes
-results = face_recognition.compare_faces([image1_encoding], image2_encoding)
-print("¿Son la misma persona?:", results[0])
+def extract_text_from_image(image):
+    processed_image = preprocess_image_for_ocr(image)
+    return pytesseract.image_to_string(
+        processed_image, lang="spa", config="--psm 6"
+    ).strip()
+
+
+def process_dni_images(dni_image, user_image):
+    # Convertir a RGB si la imagen está en un formato no compatible
+    dni_image = convert_to_rgb_if_needed(dni_image)
+    user_image = convert_to_rgb_if_needed(user_image)
+
+    # Coordenadas de las regiones de interés (ROI) en el DNI
+    roi_coords = {
+        "run": (155, 730, 438, 778),
+        "apellidos": (459, 141, 860, 233),
+        "nombres": (466, 264, 964, 308),
+        "numero_documento": (775, 422, 1093, 472),
+        "foto": (19, 249, 468, 670),
+    }
+
+    # Extraer texto de cada ROI usando pytesseract
+    text_run = extract_text_from_image(dni_image.crop(roi_coords["run"]))
+    text_apellidos = extract_text_from_image(dni_image.crop(roi_coords["apellidos"]))
+    text_nombres = extract_text_from_image(dni_image.crop(roi_coords["nombres"]))
+    text_numero_documento = extract_text_from_image(
+        dni_image.crop(roi_coords["numero_documento"])
+    )
+
+    # Imprimir los resultados
+    print("RUN:", text_run)
+    print("Apellidos:", text_apellidos)
+    print("Nombres:", text_nombres)
+    print("Número de Documento:", text_numero_documento)
+
+    # Comparación de rostros
+    face_distance, are_same_person = compare_faces(
+        dni_image, user_image, roi_coords["foto"]
+    )
+
+    if not are_same_person:
+        return {
+            "distancia_cara": face_distance,
+            "misma_persona": are_same_person,
+        }
+
+    return {
+        "RUN": text_run,
+        "Apellidos": text_apellidos,
+        "Nombres": text_nombres,
+        "Nun_doc": text_numero_documento,
+        "distancia_cara": face_distance,
+        "misma_persona": are_same_person,
+    }
+
+
+def convert_to_rgb_if_needed(image):
+    if image.mode in ("RGBA", "P"):
+        return image.convert("RGB")
+    return image
+
+
+def compare_faces(dni_image, user_image, foto_coords):
+    roi_foto_dni_np = np.array(dni_image.crop(foto_coords))
+    foto_dni_encoding = face_recognition.face_encodings(roi_foto_dni_np)[0]
+    user_image_np = np.array(user_image)
+    image2_encoding = face_recognition.face_encodings(user_image_np)[0]
+
+    # Obtener la distancia entre las dos codificaciones
+    face_distance = face_recognition.face_distance(
+        [foto_dni_encoding], image2_encoding
+    )[0]
+
+    # Comparar las dos imágenes
+    comparison_result = face_recognition.compare_faces(
+        [foto_dni_encoding], image2_encoding
+    )
+    are_same_person = bool(comparison_result[0])
+
+    return face_distance, are_same_person

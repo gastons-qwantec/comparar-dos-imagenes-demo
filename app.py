@@ -6,8 +6,8 @@ from flask_cors import CORS
 from PIL import Image
 from pymongo.errors import PyMongoError
 
-from compare_img_v2 import process_dni_images
-from db_connection import collection
+from compare_img import process_dni_images
+from config.db.noSQL_connection import collection
 
 app = Flask(__name__)
 CORS(app, resources={r"/process-dni": {"origins": "http://localhost:3000"}})
