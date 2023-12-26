@@ -1,7 +1,10 @@
 import face_recognition
 import numpy as np
 import pytesseract
-from PIL import Image, ImageEnhance, ImageFilter
+import torch
+from PIL import Image, ImageEnhance, ImageFilter, ImageOps
+
+model = torch.hub.load("ultralytics/yolov5", "custom", path="models/dni_chile_model.pt")
 
 
 def preprocess_image_for_ocr(image):
@@ -21,10 +24,37 @@ def extract_text_from_image(image):
     ).strip()
 
 
+def resize_image_keep_aspect(dni_image, target_size=640):
+    # Calcular la nueva dimensión manteniendo la relación de aspecto
+    aspect_ratio = dni_image.width / dni_image.height
+    if aspect_ratio > 1:  # La imagen es más ancha que alta
+        new_width = target_size
+        new_height = int(target_size / aspect_ratio)
+    else:  # La imagen es más alta que ancha
+        new_height = target_size
+        new_width = int(target_size * aspect_ratio)
+
+    # Redimensionar la imagen
+    resized_img = dni_image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+    return resized_img
+
+
 def process_dni_images(dni_image, user_image):
     # Convertir a RGB si la imagen está en un formato no compatible
     dni_image = convert_to_rgb_if_needed(dni_image)
+
+    # Uso de la función
+    resized_image = resize_image_keep_aspect(dni_image)
+    resized_image.show()
+
     user_image = convert_to_rgb_if_needed(user_image)
+
+    results = model(resized_image)
+
+    # Imprimir los resultados
+    print("Resultados:")
+    print(results)
+    results.print()
 
     # Coordenadas de las regiones de interés (ROI) en el DNI
     roi_coords = {
