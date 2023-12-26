@@ -1,12 +1,13 @@
 # Proyecto de Comparación de Imágenes Faciales
 
-Este proyecto utiliza la biblioteca `face_recognition` en Python para comparar dos imágenes faciales y determinar si pertenecen a la misma persona. Además, integra `pytesseract` para el reconocimiento óptico de caracteres (OCR), permitiendo extraer texto de imágenes, como datos de un DNI. Se ha añadido el uso de `labelImg` para el procesamiento de imágenes, facilitando la preparación de datos para entrenamiento de modelos.
+Este proyecto utiliza la biblioteca `face_recognition` en Python para comparar dos imágenes faciales y determinar si pertenecen a la misma persona. Además, integra `pytesseract` para el reconocimiento óptico de caracteres (OCR), permitiendo extraer texto de imágenes, como datos de un DNI. Se ha añadido el uso de `labelImg` para el procesamiento de imágenes, facilitando la preparación de datos para entrenamiento de modelos. También, se integra YOLOv5 para la detección de objetos en imágenes.
 
 ## Características
 
 - Comparación facial utilizando `face_recognition`.
 - Extracción de texto de imágenes de DNI con `pytesseract`.
 - Anotación de imágenes para el tratamiento de modelos con `labelImg`.
+- Detección de objetos utilizando YOLOv5.
 - API Flask para recibir imágenes y procesar las solicitudes.
 
 ## Requisitos Previos
@@ -15,7 +16,7 @@ Este proyecto utiliza la biblioteca `face_recognition` en Python para comparar d
 - CMake.
 - Visual Studio con herramientas de desarrollo en C++.
 - Tesseract OCR.
-- PyQt5(para `labelImg`)
+- PyQt5 (para `labelImg`).
 
 ## Instalación
 
@@ -44,18 +45,33 @@ Este proyecto utiliza la biblioteca `face_recognition` en Python para comparar d
 
   - `$ pip install labelImg`
 
+7. **Integración con YOLOv5:**
+   Para obtener más información sobre YOLOv5 y cómo usarlo en tu proyecto, visita [YOLOv5 GitHub Repository](https://github.com/ultralytics/yolov5).
+
 **Nota:** Para la instalación en Windows, sigue este [tutorial de instalación](https://www.datasmarts.net/como-instalar-tesseract-ocr/) de Tesseract OCR.
 
 ## Configuración
 
 1. **Clonar el repositorio:**
 
-`$git clone https://github.com/gastons-qwantec/comparar-dos-imagenes-demo`
+`$ git clone https://github.com/gastons-qwantec/comparar-dos-imagenes-demo`
 
 2. **Instalar dependencias:**
    Navega al directorio del proyecto y ejecuta:
 
 `$ pip install -r requirements.txt`
+
+## Dockerización
+
+Este proyecto puede ser ejecutado en contenedores Docker. Aquí te mostramos cómo configurarlo y ejecutarlo:
+
+1. **Construye la imagen Docker:**
+
+   `$ docker build -t nombre-de-tu-imagen .`
+
+2. **Ejecuta tu aplicación en un contenedor Docker:**
+
+   `$ docker run -p 5000:5000 nombre-de-tu-imagen`
 
 ## Uso
 
@@ -73,11 +89,3 @@ Este proyecto utiliza la biblioteca `face_recognition` en Python para comparar d
 
 - Ejemplo de cómo comparar una foto de DNI y una foto personal para verificar la identidad.
 - Ejemplo de cómo validar resultados con imágenes de diferentes personas.
-
-## Contribuciones
-
-Las contribuciones son bienvenidas. Por favor, lee `CONTRIBUTING.md` para obtener detalles sobre nuestro código de conducta y el proceso para enviarnos pull requests.
-
-## Licencia
-
-Este proyecto está licenciado bajo la Licencia MIT - ver el archivo `LICENSE` para más detalles.
