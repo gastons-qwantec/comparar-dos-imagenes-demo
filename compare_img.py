@@ -42,62 +42,37 @@ def resize_image_keep_aspect(dni_image, target_size=640):
 def process_dni_images(dni_image, user_image):
     # Convertir a RGB si la imagen está en un formato no compatible
     dni_image = convert_to_rgb_if_needed(dni_image)
-
-    # Uso de la función
-    resized_image = resize_image_keep_aspect(dni_image)
-    resized_image.show()
-
     user_image = convert_to_rgb_if_needed(user_image)
 
+    # Redimensionar la imagen para el modelo
+    resized_image = resize_image_keep_aspect(dni_image)
+
+    # Obtener resultados del modelo
     results = model(resized_image)
 
-    # Imprimir los resultados
-    print("Resultados:")
-    print(results)
-    results.print()
+    # Inicializar el diccionario de resultados
+    extracted_info = {}
 
-    # Coordenadas de las regiones de interés (ROI) en el DNI
-    roi_coords = {
-        "run": (155, 730, 438, 778),
-        "apellidos": (459, 141, 860, 233),
-        "nombres": (466, 264, 964, 308),
-        "numero_documento": (775, 422, 1093, 472),
-        "foto": (19, 249, 468, 670),
-    }
+    # Procesar cada detección
+    for *xyxy, conf, cls in results.xyxy[0].numpy():
+        label = results.names[int(cls)]
+        if label == "DNI_TARJETA":
+            # Omitir la etiqueta DNI_TARJETA
+            continue
 
-    # Extraer texto de cada ROI usando pytesseract
-    text_run = extract_text_from_image(dni_image.crop(roi_coords["run"]))
-    text_apellidos = extract_text_from_image(dni_image.crop(roi_coords["apellidos"]))
-    text_nombres = extract_text_from_image(dni_image.crop(roi_coords["nombres"]))
-    text_numero_documento = extract_text_from_image(
-        dni_image.crop(roi_coords["numero_documento"])
-    )
+        bbox = [round(x) for x in xyxy]  # Coordenadas de la caja delimitadora
+        if label == "DNI_FOTO":
+            # Procesar para comparación facial
+            face_distance, are_same_person = compare_faces(dni_image, user_image, bbox)
+            extracted_info["distancia_cara"] = face_distance
+            extracted_info["misma_persona"] = are_same_person
+        else:
+            # Procesar para extracción de texto con OCR
+            roi = resized_image.crop(bbox)
+            text = extract_text_from_image(roi)
+            extracted_info[label] = text
 
-    # Imprimir los resultados
-    print("RUN:", text_run)
-    print("Apellidos:", text_apellidos)
-    print("Nombres:", text_nombres)
-    print("Número de Documento:", text_numero_documento)
-
-    # Comparación de rostros
-    face_distance, are_same_person = compare_faces(
-        dni_image, user_image, roi_coords["foto"]
-    )
-
-    if not are_same_person:
-        return {
-            "distancia_cara": face_distance,
-            "misma_persona": are_same_person,
-        }
-
-    return {
-        "RUN": text_run,
-        "Apellidos": text_apellidos,
-        "Nombres": text_nombres,
-        "Nun_doc": text_numero_documento,
-        "distancia_cara": face_distance,
-        "misma_persona": are_same_person,
-    }
+    return extracted_info
 
 
 def convert_to_rgb_if_needed(image):
@@ -108,9 +83,21 @@ def convert_to_rgb_if_needed(image):
 
 def compare_faces(dni_image, user_image, foto_coords):
     roi_foto_dni_np = np.array(dni_image.crop(foto_coords))
-    foto_dni_encoding = face_recognition.face_encodings(roi_foto_dni_np)[0]
+    encodings_dni = face_recognition.face_encodings(roi_foto_dni_np)
+
+    if len(encodings_dni) == 0:
+        # No se detectaron caras en la imagen del DNI
+        return None, False
+
+    foto_dni_encoding = encodings_dni[0]
     user_image_np = np.array(user_image)
-    image2_encoding = face_recognition.face_encodings(user_image_np)[0]
+    encodings_user = face_recognition.face_encodings(user_image_np)
+
+    if len(encodings_user) == 0:
+        # No se detectaron caras en la imagen del usuario
+        return None, False
+
+    image2_encoding = encodings_user[0]
 
     # Obtener la distancia entre las dos codificaciones
     face_distance = face_recognition.face_distance(

@@ -35,10 +35,13 @@ def process_dni():
                 200,
             )
 
-        rut = results.get("RUN")
-        if rut and collection.find_one({"RUN": rut}):
-            app.logger.info(f"RUT {rut} ya existe en la base de datos")
-            return jsonify({"message": f"RUT {rut} ya existe en la base de datos"}), 201
+        rut = results.get("DNI_RUT")
+        if rut and collection.find_one({"DNI_RUT": rut}):
+            app.logger.info(f"DNI_RUT {rut} ya existe en la base de datos")
+            return (
+                jsonify({"message": f"DNI_RUT {rut} ya existe en la base de datos"}),
+                201,
+            )
 
         insert_result = collection.insert_one(results)
         results["_id"] = str(insert_result.inserted_id)
